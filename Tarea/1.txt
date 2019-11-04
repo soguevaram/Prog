@@ -1,0 +1,18 @@
+Estudiantes: 2
+Notas por estudiante: 5
+Nombre: Juan
+id : 1032509431
+Notas:
+0
+3.2
+4.3
+3.9
+5
+Nombre: Camilo
+id: 1042698526
+Notas:
+0
+3.2
+4.3
+3.9
+5
