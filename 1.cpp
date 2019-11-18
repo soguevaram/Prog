@@ -1,103 +1,131 @@
 #include <fstream>
+#include <iostream>
 #include <cmath>
-#include <iomanip>
+#include <vector>
 
-using fptr = double(double);  
-double bisection(double xl, double xu, double eps, fptr f);
-double regulafalsi(double xl, double xu, double eps, fptr f);
-double newton_raphson(double x0, double eps, fptr f, fptr fderiv);
-double fun(double x);
-double deriv(double x);
+const double W = M_PI;
+const double TF = 6;
+const double X0 = 3.21;
+const double V0 = 0.0;
+const int DIM = 2;
 
-  
+void euler(std::vector<double> & data, double t, double h);
+void rk4(std::vector<double> & data, double t, double h);
+double f(int idx, double t, const std::vector<double> & y);
+
 int main(void)
+
 {
-  std::ofstream fout ("1.txt");
-  fout << "#Eps-Delta"	<<std::setw(7) << "\t" << "N bisection" <<std::setw(2)	<< "\t" <<  "N regula"<< "\t" << "N newton" << "\n";
+  std::ofstream fout("1.txt");
+  fout.precision(15); fout.setf(std::ios::scientific);
+  double H = 0.0;
+  std::vector <double> y = {X0,V0};
 
-  for (int n=1; n <= 9; ++n){
+  double sol = 3.21*std::cos(6*M_PI);
+
+  for (int ii = 0; ii <= 14; ++ii)
+    {
+      H = std::pow(0.5,ii);
+
+      
+      fout << H << "\t";
+
+      y = {X0,V0};
     
-    double eps = std::pow(10,-n);
+      euler(y, TF,H);
 
-    fout.setf(std::ios::scientific);
-    fout<<std::setprecision(15) << eps << "\t";
-    fout.unsetf(std::ios::scientific);
-    fout<<std::setw(5);
-    fout<< bisection(0, 50, eps, fun) << "\t"
-	<<std::setw(10)
-	<< regulafalsi(0, 50, eps, fun) << "\t"
-	<<std::setw(10)
-	<< newton_raphson(0.1, eps, fun, deriv) << "\n";   
-	       }
+      
+
+      fout << std::fabs(sol- y[0])/(sol) << "\t";
+      y = {X0,V0};
+      
+      rk4 (y, TF, H);
+      fout << std::fabs(sol- y[0])/(sol) << "\n"; 
+      
+    }
+
   fout.close();
   return 0;
 }
 
-
-double bisection(double xl, double xu, double eps, fptr f)
+double f(int idx, double t, const std::vector<double> & y)
 {
-  double xr = xl;
-  int iter = 0;
-  while(1) {
-    xr=(xl+xu)/2;
-    if (std::fabs(f(xr)) <= eps) {
-      break;
-    }
-    else if (f(xr)*f(xl) < 0) {
-      xu = xr;
-    }
-    else {
-      xl = xr;
-    }
-    iter++;
+  if (0 == idx){
+    return y[1];
   }
-  return  iter ;
+  else if (1 == idx) {
+    return -W*W*y[0];
+  }
+  else {
+    std::cerr << "Error" << idx << std::endl;
+    exit (1);
+  }		     
 }
 
-double regulafalsi(double xl, double xu, double eps, fptr f)
+void euler(std::vector<double> & data, double t_f, double h)
 {
-  double xr = xl;
-  int iter = 0;
-  while(1) {
-    xr = xu - (f(xu)*(xl-xu))/(f(xl) -f(xu));
-    if (std::fabs(f(xr)) <= eps) {
-      break;
-    }
-    else if (f(xr)*f(xl) < 0) {
-      xu = xr;
-    }
-    else {
-      xl = xr;
-    }
-    iter++;
+  double paso = t_f/h;
+  std::vector<double> datatmp = data;  
+  for (int i = 0; i < paso; ++ i){ 
+  double t = h*i; 
+  for(int ii = 0; ii < data.size(); ++ii) {
+    data[ii] = data[ii] + h*f(ii, t, datatmp);  
+    
   }
-  return  iter ;
+  datatmp = data;
+  }
 
 }
 
+void rk4(std::vector<double> & data, double t_f, double h){
+  double paso = t_f/h;
+  for (int i = 0; i < paso; ++ i){ 
+  double t = h*i; 
 
-double newton_raphson(double x0, double eps, fptr f, fptr fderiv)
-{
-  double xr = x0;
-  int iter = 0;
-  while(1) {
-    if (std::fabs(f(xr)) <= eps) {
-      break;
+    std::vector<double> k1, k2, k3, k4, aux;
+    k1.resize(data.size());
+    k2.resize(data.size());
+    k3.resize(data.size());
+    k4.resize(data.size());
+    aux.resize(data.size());
+      
+    
+    // k1
+    for(int ii = 0; ii < data.size(); ++ii) {
+      k1[ii] = h*f(ii, t, data);
     }
-    xr = xr - f(xr)/fderiv(xr);
-    iter++;
+    // k2 aux
+    for(int ii = 0; ii < data.size(); ++ii) {
+      aux[ii] = data[ii] + k1[ii]/2;
+    }
+    //k2
+    for(int ii = 0; ii < data.size(); ++ii) {
+      k2[ii] = h*f(ii, t + h/2, aux);
+    }
+    // k3 aux
+    for(int ii = 0; ii < data.size(); ++ii) {
+      aux[ii] = data[ii] + k2[ii]/2;
+    }
+    //k3
+    for(int ii = 0; ii < data.size(); ++ii) {
+      k3[ii] = h*f(ii, t + h/2, aux);
+    }
+    // k4 aux
+    for(int ii = 0; ii < data.size(); ++ii) {
+      aux[ii] = data[ii] + k3[ii];
+    }
+    //k4
+    for(int ii = 0; ii < data.size(); ++ii) {
+      k4[ii] = h*f(ii, t + h, aux);
+    }
+
+    // write new data
+    for(int ii = 0; ii < data.size(); ++ii) {
+    data[ii] = data[ii] + (k1[ii] + 2*k2[ii] + 2*k3[ii] + k4[ii])/6.0;
+    
+   
   }
-  return  iter ;
+
+  }
   
-}
-
-
-double fun(double x)
-{
-  return 3*std::exp(-x) - x;
-}
-
-double deriv(double x)
-{
-  return -3*std::exp(-x)- 1;
 }
